@@ -1,0 +1,30 @@
+docker exec -it clab-rede-laboratorio-A sh
+
+
+
+
+
+useradd -m -s /bin/bash -G users,vyattacfg dep-administrativo
+echo 'dep-administrativo:SUA_SENHA' | chpasswd
+
+
+
+
+CRIAR SSH DO ZERO SEM ERROS
+
+useradd -m -s /bin/bash -G users,vyattacfg,sudo dep-administrativo
+echo 'dep-administrativo:SUA_SENHA' | chpasswd
+su - dep-administrativo
+
+id
+sudo -l
+
+configure
+set service ssh port 22
+commit
+save
+
+exit
+
+ip -br addr
+sudo ss -tlnp | grep ':22'

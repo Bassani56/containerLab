@@ -1,0 +1,135 @@
+
+name: rede-laboratorio
+
+topology:
+  kinds:
+    vyosnetworks_vyos:
+      image: vyos:2026.03
+
+    linux:
+      image: alpine:3.21
+
+  nodes:
+    A:
+      kind: vyosnetworks_vyos
+      startup-config: |
+        interfaces {
+            ethernet eth1 {
+                address 10.0.0.1/30
+            }
+            ethernet eth2 {
+                address 192.168.10.1/24
+            }
+        }
+        protocols {
+            static {
+                route 192.168.20.0/24 {
+                    next-hop 10.0.0.2 {
+                    }
+                }
+            }
+        }
+
+    B:
+      kind: vyosnetworks_vyos
+      startup-config: |
+        interfaces {
+            ethernet eth1 {
+                address 10.0.0.2/30
+            }
+            ethernet eth2 {
+                address 10.0.0.5/30
+            }
+            ethernet eth3 {
+                address 203.0.113.1/30
+            }
+        }
+        protocols {
+            static {
+                route 192.168.10.0/24 {
+                    next-hop 10.0.0.1 {
+                    }
+                }
+                route 192.168.20.0/24 {
+                    next-hop 10.0.0.6 {
+                    }
+                }
+            }
+        }
+
+    C:
+      kind: vyosnetworks_vyos
+      startup-config: |
+        interfaces {
+            ethernet eth1 {
+                address 10.0.0.6/30
+            }
+            ethernet eth2 {
+                address 192.168.20.1/24
+            }
+        }
+        protocols {
+            static {
+                route 192.168.10.0/24 {
+                    next-hop 10.0.0.5 {
+                    }
+                }
+            }
+        }
+
+
+    # ROTEADOR ISP - REDE EXTERNA SIMULADA
+    ISP:
+      kind: vyosnetworks_vyos
+
+    # HOST 1 - REDE A
+    host1:
+      kind: linux
+      image: lab-mysql:1.0
+      exec:
+        - ip addr add 192.168.10.10/24 dev eth1
+        - ip route replace 192.168.20.0/24 via 192.168.10.1 dev eth1
+        # Usuario do servidor de banco de dados
+        - sh -c "id dbadmin || adduser -D dbadmin"
+        - sh -c "echo 'dbadmin:${DBADMIN_PASSWORD:?defina DBADMIN_PASSWORD no .env}' | chpasswd"
+        - mysql_install_db --user=mysql --datadir=/var/lib/mysql
+        - sh -c "mysqld_safe --user=mysql --bind-address=0.0.0.0 &"
+
+      binds:
+        - ./data/mysql-init:/docker-entrypoint-initdb.d:ro
+        - ./data/mysql-data:/var/lib/mysql
+
+    host2:
+      kind: linux
+      image: lab-http:1.0
+      exec:
+        - ip addr add 192.168.20.10/24 dev eth1
+        - ip route replace 192.168.10.0/24 via 192.168.20.1 dev eth1
+        # Usuario do servidor do site
+        - sh -c "id webadmin || adduser -D webadmin"
+        - sh -c "echo 'webadmin:${WEBADMIN_PASSWORD:?defina WEBADMIN_PASSWORD no .env}' | chpasswd"
+        - nginx
+      binds:
+        - ./data/www:/var/www/html
+        - ./data/nginx.conf:/etc/nginx/http.d/default.conf:ro
+
+  links:
+    # A <-> B
+    - endpoints: ["A:eth1", "B:eth1"]
+      ipv4: ["10.0.0.1/30", "10.0.0.2/30"]
+
+    # B <-> C
+    - endpoints: ["B:eth2", "C:eth1"]
+      ipv4: ["10.0.0.5/30", "10.0.0.6/30"]
+
+    # B <-> ISP
+    - endpoints: ["B:eth3", "ISP:eth1"]
+      ipv4: ["203.0.113.1/30", "203.0.113.2/30"]
+
+    # A <-> HOST 1
+    - endpoints: ["A:eth2", "host1:eth1"]
+      ipv4: ["192.168.10.1/24", "192.168.10.10/24"]
+
+    # C <-> HOST 2
+    - endpoints: ["C:eth2", "host2:eth1"]
+      ipv4: ["192.168.20.1/24", "192.168.20.10/24"]

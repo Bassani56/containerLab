@@ -1,0 +1,19 @@
+# Segredos
+.env
+
+# Gerado pelo containerlab (configs, certificados, chaves SSH)
+clab-*/
+.*.clab.yml.bak
+*.clab.yml.bak
+
+# Dados do banco de dados
+data/mysql-data/
+
+# Editor / sistema
+.vscode/
+.idea/
+*.swp
+.DS_Store
+
+# Imagens grandes (acima do limite de 100 MB do GitHub)
+clab/images/
