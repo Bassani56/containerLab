@@ -1,4 +1,3 @@
-
 name: rede-laboratorio
 
 topology:
@@ -97,8 +96,12 @@ topology:
         # Usuario do servidor de banco de dados
         - sh -c "id dbadmin || adduser -D dbadmin"
         - sh -c "echo 'dbadmin:${DBADMIN_PASSWORD:?defina DBADMIN_PASSWORD no .env}' | chpasswd"
-        - mysql_install_db --user=mysql --datadir=/var/lib/mysql
+        # So inicializa o banco se /var/lib/mysql ainda estiver vazio
+        - sh -c "[ -d /var/lib/mysql/mysql ] || mysql_install_db --user=mysql --datadir=/var/lib/mysql"
         - sh -c "mysqld_safe --user=mysql --bind-address=0.0.0.0 &"
+        - sh -c "until mysqladmin ping --silent 2>/dev/null; do sleep 1; done"
+        # So roda os scripts de init.d na primeira vez (marca com um arquivo sentinela)
+        - sh -c "[ -f /var/lib/mysql/.inicializado ] || { for f in /docker-entrypoint-initdb.d/*.sql; do sed \"s/\\${APPUSER_PASSWORD}/${APPUSER_PASSWORD:?defina APPUSER_PASSWORD no .env}/g\" \"$f\" | mysql; done; touch /var/lib/mysql/.inicializado; }"
 
       binds:
         - ./aplicacoes/banco/init:/docker-entrypoint-initdb.d:ro
@@ -115,8 +118,11 @@ topology:
         - sh -c "id webadmin || adduser -D webadmin"
         - sh -c "echo 'webadmin:${WEBADMIN_PASSWORD:?defina WEBADMIN_PASSWORD no .env}' | chpasswd"
         - nginx
+        # Aplicacao Python que consulta o banco no host1
+        - sh -c "DB_HOST=192.168.10.10 DB_USER=appuser DB_PASSWORD='${APPUSER_PASSWORD:?defina APPUSER_PASSWORD no .env}' DB_NAME=loja python3 /app/app.py > /var/log/app.log 2>&1 &"
       binds:
         - ./aplicacoes/site:/var/www/html
+        - ./aplicacoes/consulta-produtos:/app:ro
         - ./hosts/host2/nginx/default.conf:/etc/nginx/http.d/default.conf:ro
 
   links:
