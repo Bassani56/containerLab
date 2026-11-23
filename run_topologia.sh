@@ -1,6 +1,9 @@
 #!/bin/bash
 
-set -a; source "$(dirname "$0")/.env"; set +a
+cd "$(dirname "$0")" || exit 1
+set -a; source ./.env; set +a
+# Pastas de bind que nao sao versionadas no git
+mkdir -p hosts/host1/mysql/dados aplicacoes/banco/init
 read -p "start(1) or replace(2)? " option
 
 if [ "$option" = "1" ]; then

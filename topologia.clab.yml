@@ -12,6 +12,7 @@ topology:
   nodes:
     A:
       kind: vyosnetworks_vyos
+      mgmt-ipv4: 172.20.20.2
       startup-config: |
         interfaces {
             ethernet eth1 {
@@ -32,6 +33,7 @@ topology:
 
     B:
       kind: vyosnetworks_vyos
+      mgmt-ipv4: 172.20.20.7
       startup-config: |
         interfaces {
             ethernet eth1 {
@@ -59,6 +61,7 @@ topology:
 
     C:
       kind: vyosnetworks_vyos
+      mgmt-ipv4: 172.20.20.5
       startup-config: |
         interfaces {
             ethernet eth1 {
@@ -81,10 +84,12 @@ topology:
     # ROTEADOR ISP - REDE EXTERNA SIMULADA
     ISP:
       kind: vyosnetworks_vyos
+      mgmt-ipv4: 172.20.20.6
 
     # HOST 1 - REDE A
     host1:
       kind: linux
+      mgmt-ipv4: 172.20.20.4
       image: lab-mysql:1.0
       exec:
         - ip addr add 192.168.10.10/24 dev eth1
@@ -96,11 +101,12 @@ topology:
         - sh -c "mysqld_safe --user=mysql --bind-address=0.0.0.0 &"
 
       binds:
-        - ./data/mysql-init:/docker-entrypoint-initdb.d:ro
-        - ./data/mysql-data:/var/lib/mysql
+        - ./aplicacoes/banco/init:/docker-entrypoint-initdb.d:ro
+        - ./hosts/host1/mysql/dados:/var/lib/mysql
 
     host2:
       kind: linux
+      mgmt-ipv4: 172.20.20.3
       image: lab-http:1.0
       exec:
         - ip addr add 192.168.20.10/24 dev eth1
@@ -110,8 +116,8 @@ topology:
         - sh -c "echo 'webadmin:${WEBADMIN_PASSWORD:?defina WEBADMIN_PASSWORD no .env}' | chpasswd"
         - nginx
       binds:
-        - ./data/www:/var/www/html
-        - ./data/nginx.conf:/etc/nginx/http.d/default.conf:ro
+        - ./aplicacoes/site:/var/www/html
+        - ./hosts/host2/nginx/default.conf:/etc/nginx/http.d/default.conf:ro
 
   links:
     # A <-> B

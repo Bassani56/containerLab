@@ -7,7 +7,7 @@ clab-*/
 *.clab.yml.bak
 
 # Dados do banco de dados
-data/mysql-data/
+hosts/host1/mysql/dados/
 
 # Editor / sistema
 .vscode/
@@ -16,4 +16,5 @@ data/mysql-data/
 .DS_Store
 
 # Imagens grandes (acima do limite de 100 MB do GitHub)
-clab/images/
+roteadores/vyos-imagem/rootfs.tar
+roteadores/vyos-imagem/live/
